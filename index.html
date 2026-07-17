@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vérificateur d'Arnaques</title>
+<style>
+  :root{
+    --bg:#0f1115;
+    --panel:#171a21;
+    --panel-2:#1e222b;
+    --border:#2a2f3a;
+    --text:#e8eaed;
+    --text-dim:#9aa1ac;
+    --accent:#e5484d;
+    --accent-dim:#3a1418;
+    --safe:#2fb872;
+    --warn:#e0a53c;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text); line-height:1.5;}
+  header{
+    padding:28px 20px 20px;
+    text-align:center;
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,var(--panel),var(--bg));
+  }
+  header h1{margin:0 0 6px; font-size:1.6rem; display:flex; align-items:center; justify-content:center; gap:10px;}
+  header p{margin:0 auto; color:var(--text-dim); font-size:0.92rem; max-width:560px;}
+  .wrap{max-width:820px; margin:0 auto; padding:24px 16px 60px;}
+  .tabs{display:flex; gap:8px; margin-bottom:20px; border-bottom:1px solid var(--border);}
+  .tab-btn{background:none; border:none; color:var(--text-dim); font-size:0.95rem; padding:10px 16px; cursor:pointer; border-bottom:2px solid transparent;}
+  .tab-btn.active{color:var(--text); border-bottom:2px solid var(--accent);}
+  .panel{background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px;}
+  .search-row{display:flex; gap:8px; margin-bottom:14px;}
+  input[type="text"], input[type="tel"], input[type="email"], input[type="date"], select, textarea{
+    background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+    border-radius:8px; padding:10px 12px; font-size:0.95rem; width:100%;
+  }
+  textarea{resize:vertical; min-height:80px;}
+  .search-row input{flex:1;}
+  button{cursor:pointer; border:none; border-radius:8px; padding:10px 18px; font-size:0.95rem; font-weight:600;}
+  button:disabled{opacity:0.55; cursor:not-allowed;}
+  .btn-primary{background:var(--accent); color:white;}
+  .btn-primary:hover{background:#c53d41;}
+  .btn-secondary{background:var(--panel-2); color:var(--text); border:1px solid var(--border);}
+  .btn-secondary:hover{background:#262b36;}
+  .hint{color:var(--text-dim); font-size:0.82rem; margin-top:-6px; margin-bottom:14px;}
+  .results{display:flex; flex-direction:column; gap:12px; margin-top:6px;}
+  .empty-state{color:var(--text-dim); text-align:center; padding:30px 10px; font-size:0.9rem;}
+  .card{background:var(--panel-2); border:1px solid var(--border); border-radius:10px; padding:14px 16px;}
+  .card-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;}
+  .card-title{font-weight:600; font-size:1.02rem;}
+  .badge{font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap;}
+  .badge-danger{background:var(--accent-dim); color:#ff8b8e;}
+  .badge-warn{background:#3a2c12; color:#f0c069;}
+  .card-meta{color:var(--text-dim); font-size:0.82rem; margin-top:4px;}
+  .card-desc{margin-top:8px; font-size:0.9rem;}
+  .card-foot{margin-top:8px; font-size:0.78rem; color:var(--text-dim);}
+  .no-match{text-align:center; padding:24px 10px;}
+  .no-match .ok{color:var(--safe); font-weight:700; font-size:1.05rem;}
+  form .field{margin-bottom:14px;}
+  form label{display:block; font-size:0.85rem; color:var(--text-dim); margin-bottom:5px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  @media (max-width:560px){.grid2{grid-template-columns:1fr;}}
+  .banner{background:var(--accent-dim); border:1px solid #5a1e22; color:#ffb3b5; border-radius:10px; padding:12px 14px; font-size:0.85rem; margin-bottom:18px;}
+  .banner.info{background:#122436; border-color:#1e3a52; color:#8ec7f0;}
+  .stat-row{display:flex; gap:16px; margin-bottom:18px; flex-wrap:wrap;}
+  .stat{background:var(--panel-2); border:1px solid var(--border); border-radius:10px; padding:12px 16px; flex:1; min-width:120px; text-align:center;}
+  .stat .num{font-size:1.4rem; font-weight:700;}
+  .stat .lbl{font-size:0.75rem; color:var(--text-dim); margin-top:2px;}
+  .consent{display:flex; gap:8px; align-items:flex-start; font-size:0.82rem; color:var(--text-dim); margin-bottom:16px;}
+  .consent input{width:auto; margin-top:3px;}
+  .hp-field{position:absolute; left:-9999px; top:-9999px;}
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--safe); color:#04170c; padding:10px 18px; border-radius:8px;
+    font-size:0.88rem; font-weight:600; opacity:0; pointer-events:none; transition:opacity 0.25s ease; z-index:50;
+    max-width:90%; text-align:center;
+  }
+  .toast.show{opacity:1;}
+  .toast.error{background:var(--accent); color:white;}
+  footer{color:var(--text-dim); font-size:0.78rem; padding:20px; text-align:left;}
+  footer strong{color:var(--text-dim);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🛡️ Vérificateur d'Arnaques</h1>
+  <p>Recherchez un numéro de téléphone, un email ou un nom avant de faire confiance à un interlocuteur — et signalez les tentatives d'arnaque que vous rencontrez.</p>
+</header>
+
+<div class="wrap">
+
+  <div id="configBanner" class="banner" style="display:none;">
+    ⚙️ <strong>Configuration requise.</strong> Ce site n'est pas encore connecté à sa base de données. Ouvre ce fichier <code>index.html</code> et renseigne <code>SUPABASE_URL</code> et <code>SUPABASE_ANON_KEY</code> en haut du script (voir le guide fourni). En attendant, une base de démonstration locale est affichée.
+  </div>
+  <div id="loadErrorBanner" class="banner" style="display:none;"></div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="search">🔍 Vérifier</button>
+    <button class="tab-btn" data-tab="report">🚩 Signaler une arnaque</button>
+  </div>
+
+  <!-- SEARCH TAB -->
+  <div id="tab-search" class="panel">
+    <div class="stat-row">
+      <div class="stat"><div class="num" id="statTotal">–</div><div class="lbl">signalements publiés</div></div>
+      <div class="stat"><div class="num" id="statPhone">–</div><div class="lbl">numéros signalés</div></div>
+      <div class="stat"><div class="num" id="statEmail">–</div><div class="lbl">emails signalés</div></div>
+    </div>
+
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="Numéro de téléphone, email, nom ou pays...">
+      <button class="btn-primary" id="searchBtn">Vérifier</button>
+    </div>
+    <div class="hint">Astuce : la recherche est partielle et ignore les espaces/tirets dans les numéros. Vous pouvez aussi chercher par pays (ex: « Bénin »).</div>
+
+    <div id="results" class="results">
+      <div class="empty-state">Chargement de la base…</div>
+    </div>
+  </div>
+
+  <!-- REPORT TAB -->
+  <div id="tab-report" class="panel" style="display:none;">
+    <div class="banner info">
+      ℹ️ Votre signalement est publié <strong>immédiatement</strong> et publiquement dès l'envoi. Merci de rester factuel : décrivez ce qui s'est passé plutôt que de simples accusations, vous êtes responsable de l'exactitude des informations partagées.
+    </div>
+    <form id="reportForm">
+      <input type="text" name="website" id="hpField" class="hp-field" tabindex="-1" autocomplete="off">
+      <div class="grid2">
+        <div class="field">
+          <label for="rName">Nom / pseudo de la personne ou entreprise *</label>
+          <input type="text" id="rName" placeholder="Ex: Jean K. / VendeurRapide237" required>
+        </div>
+        <div class="field">
+          <label for="rType">Type d'arnaque *</label>
+          <select id="rType">
+            <option>Faux emploi</option>
+            <option>Investissement / crypto</option>
+            <option>Arnaque sentimentale</option>
+            <option>Phishing (banque / mobile money)</option>
+            <option>Faux support technique</option>
+            <option>Colis bloqué / douane</option>
+            <option>Fausse loterie / gain</option>
+            <option>Vente en ligne (faux vendeur/acheteur)</option>
+            <option>Autre</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label for="rPhone">Numéro de téléphone (si connu)</label>
+          <input type="tel" id="rPhone" placeholder="+229 00 00 00 00">
+        </div>
+        <div class="field">
+          <label for="rEmail">Email de la personne signalée (si connu)</label>
+          <input type="email" id="rEmail" placeholder="exemple@mail.com">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label for="rCountry">Pays où l'événement s'est passé</label>
+          <input type="text" id="rCountry" list="countryList" placeholder="Ex: Bénin">
+          <datalist id="countryList">
+            <option value="Afghanistan"><option value="Afrique du Sud"><option value="Albanie"><option value="Algérie"><option value="Allemagne"><option value="Andorre"><option value="Angola"><option value="Arabie saoudite"><option value="Argentine"><option value="Arménie"><option value="Australie"><option value="Autriche"><option value="Azerbaïdjan">
+            <option value="Bahamas"><option value="Bahreïn"><option value="Bangladesh"><option value="Barbade"><option value="Belgique"><option value="Belize"><option value="Bénin"><option value="Bhoutan"><option value="Biélorussie"><option value="Birmanie"><option value="Bolivie"><option value="Bosnie-Herzégovine"><option value="Botswana"><option value="Brésil"><option value="Brunei"><option value="Bulgarie"><option value="Burkina Faso"><option value="Burundi">
+            <option value="Cambodge"><option value="Cameroun"><option value="Canada"><option value="Cap-Vert"><option value="République centrafricaine"><option value="Chili"><option value="Chine"><option value="Chypre"><option value="Colombie"><option value="Comores"><option value="Congo-Brazzaville"><option value="République démocratique du Congo"><option value="Corée du Nord"><option value="Corée du Sud"><option value="Costa Rica"><option value="Côte d'Ivoire"><option value="Croatie"><option value="Cuba">
+            <option value="Danemark"><option value="Djibouti"><option value="Dominique">
+            <option value="Égypte"><option value="Émirats arabes unis"><option value="Équateur"><option value="Érythrée"><option value="Espagne"><option value="Estonie"><option value="Eswatini"><option value="États-Unis"><option value="Éthiopie">
+            <option value="Fidji"><option value="Finlande"><option value="France">
+            <option value="Gabon"><option value="Gambie"><option value="Géorgie"><option value="Ghana"><option value="Grèce"><option value="Grenade"><option value="Guatemala"><option value="Guinée"><option value="Guinée-Bissau"><option value="Guinée équatoriale"><option value="Guyana">
+            <option value="Haïti"><option value="Honduras"><option value="Hongrie">
+            <option value="Îles Marshall"><option value="Îles Salomon"><option value="Inde"><option value="Indonésie"><option value="Irak"><option value="Iran"><option value="Irlande"><option value="Islande"><option value="Israël"><option value="Italie">
+            <option value="Jamaïque"><option value="Japon"><option value="Jordanie">
+            <option value="Kazakhstan"><option value="Kenya"><option value="Kirghizistan"><option value="Kiribati"><option value="Kosovo"><option value="Koweït">
+            <option value="Laos"><option value="Lesotho"><option value="Lettonie"><option value="Liban"><option value="Liberia"><option value="Libye"><option value="Liechtenstein"><option value="Lituanie"><option value="Luxembourg">
+            <option value="Macédoine du Nord"><option value="Madagascar"><option value="Malaisie"><option value="Malawi"><option value="Maldives"><option value="Mali"><option value="Malte"><option value="Maroc"><option value="Maurice"><option value="Mauritanie"><option value="Mexique"><option value="Micronésie"><option value="Moldavie"><option value="Monaco"><option value="Mongolie"><option value="Monténégro"><option value="Mozambique">
+            <option value="Namibie"><option value="Nauru"><option value="Népal"><option value="Nicaragua"><option value="Niger"><option value="Nigeria"><option value="Norvège"><option value="Nouvelle-Zélande">
+            <option value="Oman"><option value="Ouganda"><option value="Ouzbékistan">
+            <option value="Pakistan"><option value="Palaos"><option value="Palestine"><option value="Panama"><option value="Papouasie-Nouvelle-Guinée"><option value="Paraguay"><option value="Pays-Bas"><option value="Pérou"><option value="Philippines"><option value="Pologne"><option value="Portugal">
+            <option value="Qatar">
+            <option value="Roumanie"><option value="Royaume-Uni"><option value="Russie"><option value="Rwanda">
+            <option value="Saint-Christophe-et-Niévès"><option value="Saint-Marin"><option value="Saint-Vincent-et-les-Grenadines"><option value="Sainte-Lucie"><option value="Salvador"><option value="Samoa"><option value="Sao Tomé-et-Principe"><option value="Sénégal"><option value="Serbie"><option value="Seychelles"><option value="Sierra Leone"><option value="Singapour"><option value="Slovaquie"><option value="Slovénie"><option value="Somalie"><option value="Soudan"><option value="Soudan du Sud"><option value="Sri Lanka"><option value="Suède"><option value="Suisse"><option value="Suriname"><option value="Syrie">
+            <option value="Tadjikistan"><option value="Tanzanie"><option value="Tchad"><option value="Tchéquie"><option value="Thaïlande"><option value="Timor oriental"><option value="Togo"><option value="Tonga"><option value="Trinité-et-Tobago"><option value="Tunisie"><option value="Turkménistan"><option value="Turquie"><option value="Tuvalu">
+            <option value="Ukraine"><option value="Uruguay">
+            <option value="Vanuatu"><option value="Vatican"><option value="Venezuela"><option value="Vietnam">
+            <option value="Yémen">
+            <option value="Zambie"><option value="Zimbabwe">
+            <option value="Autre / non listé">
+          </datalist>
+        </div>
+        <div class="field">
+          <label for="rDate">Date approximative</label>
+          <input type="date" id="rDate">
+        </div>
+      </div>
+      <div class="field">
+        <label for="rDesc">Décrivez ce qui s'est passé *</label>
+        <textarea id="rDesc" placeholder="Contexte, méthode utilisée, ce qui vous a alerté..." required></textarea>
+      </div>
+      <div class="field">
+        <label for="rReporterEmail">Votre email (non publié, pour vous recontacter si besoin) *</label>
+        <input type="email" id="rReporterEmail" placeholder="vous@exemple.com" required>
+      </div>
+      <div class="consent">
+        <input type="checkbox" id="rConsent" required>
+        <label for="rConsent">Je certifie que ces informations sont exactes à ma connaissance, et je comprends que ce signalement sera publié immédiatement et publiquement sur ce site.</label>
+      </div>
+      <button type="submit" class="btn-primary" id="submitBtn">Envoyer le signalement</button>
+    </form>
+  </div>
+
+  <footer>
+    <strong>À propos de ce site :</strong><br><br>
+    Les signalements affichés sont des témoignages soumis directement par des utilisateurs et publiés immédiatement, sans validation préalable. Une correspondance dans cette base est un signal d'alerte, pas une preuve juridique — vérifiez toujours par d'autres moyens avant de conclure. À l'inverse, l'absence de résultat ne garantit pas qu'un contact est fiable.<br><br>
+    Vous êtes cité par erreur ou de façon abusive dans cette base ? Contactez l'administrateur du site pour demander une vérification ou un retrait.
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ================================================================
+// CONFIGURATION — à remplir après avoir créé ton projet Supabase
+// (voir le guide de mise en ligne fourni avec ce fichier)
+// ================================================================
+const SUPABASE_URL = "sb_publishable_2MKZrlcw5sGTECHecKDBMQ_Fd-BydSK";
+const SUPABASE_ANON_KEY = "sb_publishable_2MKZrlcw5sGTECHecKDBMQ_Fd-BydSK";
+// ================================================================
+
+const isConfigured = SUPABASE_URL.startsWith("http") && !SUPABASE_ANON_KEY.startsWith("COLLEZ");
+
+// Données de démonstration utilisées tant que Supabase n'est pas configuré
+const DEMO_DATA = [
+  {
+    id: "demo-1",
+    name: "« Agence Recrutement Rapide »",
+    type: "Faux emploi",
+    phone: "+229 90 00 11 22",
+    email: "recrutement.rapide@example.com",
+    description: "Propose un emploi à distance très bien payé, puis demande de payer des « frais de dossier » avant de commencer. Aucune entreprise réelle derrière le nom.",
+    incident_date: "2026-02-14",
+    risk: "high",
+    source: "Exemple pédagogique",
+    country: "Bénin"
+  },
+  {
+    id: "demo-2",
+    name: "Kevin_Invest_Pro",
+    type: "Investissement / crypto",
+    phone: "+229 61 22 33 44",
+    email: "kevin.invest.pro@example.com",
+    description: "Promet de « doubler » l'argent investi en crypto-monnaie en une semaine, puis bloque la victime après le premier versement.",
+    incident_date: "2026-03-02",
+    risk: "high",
+    source: "Exemple pédagogique",
+    country: "Bénin"
+  },
+  {
+    id: "demo-3",
+    name: "« Service Sécurité Mobile Money »",
+    type: "Phishing (banque / mobile money)",
+    phone: "+229 97 00 55 66",
+    email: "securite.momo@example.com",
+    description: "Appelle en se faisant passer pour le service client de l'opérateur et demande le code secret. Un vrai opérateur ne le demande jamais.",
+    incident_date: "2026-04-05",
+    risk: "high",
+    source: "Exemple pédagogique",
+    country: "Bénin"
+  }
+];
+
+let reports = [];
+
+// ---------- Utilitaires ----------
+function normalizePhone(p){ return (p || "").replace(/[\s\-().]/g, "").toLowerCase(); }
+function normalizeText(t){ return (t || "").trim().toLowerCase(); }
+function toast(msg, isError){
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.toggle("error", !!isError);
+  el.classList.add("show");
+  setTimeout(()=> el.classList.remove("show"), 3200);
+}
+function fmtDate(d){
+  if(!d) return "date inconnue";
+  const parts = d.split("-");
+  if(parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  return d;
+}
+function escapeHtml(str){
+  const div = document.createElement("div");
+  div.textContent = str || "";
+  return div.innerHTML;
+}
+
+// ---------- Chargement des données ----------
+async function loadReports(){
+  if(!isConfigured){
+    document.getElementById("configBanner").style.display = "block";
+    reports = DEMO_DATA;
+    finishLoad();
+    return;
+  }
+  try{
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/public_reports?select=*&order=created_at.desc`,
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
+    if(!res.ok) throw new Error(`Erreur serveur (${res.status})`);
+    reports = await res.json();
+    finishLoad();
+  }catch(err){
+    const banner = document.getElementById("loadErrorBanner");
+    banner.style.display = "block";
+    banner.textContent = "❌ Impossible de charger la base pour le moment. Réessayez plus tard. (" + err.message + ")";
+    reports = [];
+    finishLoad();
+  }
+}
+function finishLoad(){
+  updateStats();
+  renderResults("");
+}
+
+// ---------- Stats ----------
+function updateStats(){
+  document.getElementById("statTotal").textContent = reports.length;
+  document.getElementById("statPhone").textContent = reports.filter(s=>s.phone).length;
+  document.getElementById("statEmail").textContent = reports.filter(s=>s.email).length;
+}
+
+// ---------- Recherche ----------
+function renderResults(query){
+  const resultsEl = document.getElementById("results");
+  if(!query){
+    resultsEl.innerHTML = '<div class="empty-state">Entrez un numéro, un email ou un nom pour voir s\'il a déjà été signalé.</div>';
+    return;
+  }
+  const qPhone = normalizePhone(query);
+  const qText = normalizeText(query);
+
+  const matches = reports.filter(entry => {
+    const nPhone = normalizePhone(entry.phone);
+    const nEmail = normalizeText(entry.email);
+    const nName = normalizeText(entry.name);
+    const nCountry = normalizeText(entry.country);
+    return (qPhone.length >= 3 && nPhone.includes(qPhone)) ||
+           (qText.length >= 2 && nEmail.includes(qText)) ||
+           (qText.length >= 2 && nName.includes(qText)) ||
+           (qText.length >= 2 && nCountry.includes(qText));
+  });
+
+  if(matches.length === 0){
+    resultsEl.innerHTML = `
+      <div class="card no-match">
+        <div class="ok">✅ Aucun signalement trouvé pour « ${escapeHtml(query)} »</div>
+        <div class="card-meta" style="margin-top:6px;">Cela ne garantit pas que ce contact est fiable. Restez prudent et vérifiez par d'autres moyens.</div>
+      </div>`;
+    return;
+  }
+
+  resultsEl.innerHTML = matches.map(entry => {
+    const badgeClass = entry.risk === "high" ? "badge-danger" : "badge-warn";
+    const badgeLabel = entry.risk === "high" ? "Risque élevé" : "À surveiller";
+    return `
+      <div class="card">
+        <div class="card-top">
+          <div class="card-title">⚠️ ${escapeHtml(entry.name)}</div>
+          <span class="badge ${badgeClass}">${badgeLabel}</span>
+        </div>
+        <div class="card-meta">${escapeHtml(entry.type)} · ${entry.phone ? escapeHtml(entry.phone) : "pas de numéro"}${entry.email ? " · " + escapeHtml(entry.email) : ""}${entry.country ? " · 🌍 " + escapeHtml(entry.country) : ""}</div>
+        <div class="card-desc">${escapeHtml(entry.description)}</div>
+        <div class="card-foot">Signalé le ${fmtDate(entry.incident_date)} — ${escapeHtml(entry.source || "source non précisée")}</div>
+      </div>`;
+  }).join("");
+}
+
+// ---------- Onglets ----------
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    const tab = btn.dataset.tab;
+    document.getElementById("tab-search").style.display = tab === "search" ? "block" : "none";
+    document.getElementById("tab-report").style.display = tab === "report" ? "block" : "none";
+  });
+});
+
+// ---------- Recherche events ----------
+document.getElementById("searchBtn").addEventListener("click", () => {
+  renderResults(document.getElementById("searchInput").value.trim());
+});
+document.getElementById("searchInput").addEventListener("keydown", (e) => {
+  if(e.key === "Enter") renderResults(document.getElementById("searchInput").value.trim());
+});
+
+// ---------- Formulaire de signalement ----------
+document.getElementById("reportForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  // Honeypot anti-robot : si ce champ caché est rempli, on ignore silencieusement.
+  if(document.getElementById("hpField").value){
+    toast("✅ Signalement publié. Merci !");
+    e.target.reset();
+    return;
+  }
+
+  if(!isConfigured){
+    toast("⚠️ Le site n'est pas encore connecté à la base de données (voir le guide de mise en ligne).", true);
+    return;
+  }
+
+  const name = document.getElementById("rName").value.trim();
+  const type = document.getElementById("rType").value;
+  const phone = document.getElementById("rPhone").value.trim();
+  const email = document.getElementById("rEmail").value.trim();
+  const country = document.getElementById("rCountry").value.trim();
+  const description = document.getElementById("rDesc").value.trim();
+  const incident_date = document.getElementById("rDate").value || null;
+  const reporter_email = document.getElementById("rReporterEmail").value.trim();
+  const consent = document.getElementById("rConsent").checked;
+
+  if(!name || !description || !reporter_email || !consent){
+    toast("⚠️ Merci de remplir tous les champs obligatoires (*).", true);
+    return;
+  }
+
+  const submitBtn = document.getElementById("submitBtn");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Envoi en cours…";
+
+  try{
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/reports`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal"
+      },
+      body: JSON.stringify({ name, type, phone, email, country, description, incident_date, reporter_email })
+    });
+    if(!res.ok){
+      const errBody = await res.text();
+      throw new Error(errBody || `Erreur serveur (${res.status})`);
+    }
+    toast("✅ Merci ! Votre signalement a été publié.");
+    e.target.reset();
+  }catch(err){
+    toast("❌ Échec de l'envoi. Réessayez plus tard.", true);
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Envoyer le signalement";
+  }
+});
+
+// ---------- Init ----------
+loadReports();
+</script>
+</body>
+</html>
